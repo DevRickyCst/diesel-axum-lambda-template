@@ -5,6 +5,3 @@ ignore = ["target", ".git", "postman"]
 
 [placeholders]
 description = { type = "string", prompt = "Project description", default = "Service built with Axum + Diesel + Lambda" }
-
-[hooks]
-post = ["hooks/post-gen.sh"]
