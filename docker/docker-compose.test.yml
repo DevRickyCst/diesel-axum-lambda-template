@@ -1,6 +1,7 @@
 services:
   {{project-name}}-db-test:
     image: postgres:17-alpine
+    container_name: {{project-name}}-db-test
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -13,6 +14,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile # Utilise ton Dockerfile avec diesel_cli
     platform: linux/amd64
+    container_name: {{project-name}}-test-runner
     working_dir: /app
     volumes:
       - ../:/app
