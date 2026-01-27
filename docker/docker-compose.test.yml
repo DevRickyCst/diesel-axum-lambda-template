@@ -1,3 +1,4 @@
+name: {{project-name}}-test
 services:
   {{project-name}}-db-test:
     image: postgres:17-alpine
