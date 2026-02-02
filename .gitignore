@@ -1,1 +1,31 @@
+# Rust
 /target
+Cargo.lock
+*.rs.bk
+*.pdb
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+bin/
+*.log
+*.tmp
+
+# Database
+*.db
+*.sqlite
+
+# Test artifacts
+.test/
