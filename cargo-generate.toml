@@ -1,7 +1,16 @@
 [template]
 name = "axum-diesel-template"
-description = "Axum + Diesel + Lambda starter (health + DB, no auth)"
-ignore = ["target", ".git", "postman"]
+description = "Production-ready Axum + Diesel + Lambda template with layered architecture"
+ignore = ["target", ".git", ".idea", ".vscode"]
 
 [placeholders]
-description = { type = "string", prompt = "Project description", default = "Service built with Axum + Diesel + Lambda" }
+project_name = { type = "string", prompt = "Project name (lowercase, alphanumeric, dashes, underscores)", regex = "^[a-z][a-z0-9_-]+$" }
+project_description = { type = "string", prompt = "Project description", default = "A production-ready Rust web service built with Axum, Diesel, and PostgreSQL" }
+author_name = { type = "string", prompt = "Author name", default = "Your Name" }
+author_email = { type = "string", prompt = "Author email", default = "your.email@example.com" }
+database_name = { type = "string", prompt = "Database name (will be used for PostgreSQL database)", regex = "^[a-z][a-z0-9_]+$" }
+rust_version = { type = "string", prompt = "Rust toolchain version", default = "stable", choices = ["stable", "1.85.0", "nightly"] }
+include_lambda = { type = "bool", prompt = "Include AWS Lambda deployment infrastructure?", default = false }
+
+[conditional.'!include_lambda']
+ignore = ["infra", "scripts/deploy-lambda.sh"]

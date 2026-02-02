@@ -1,0 +1,55 @@
+services:
+  test_db:
+    image: postgres:17-alpine
+    container_name: {{project-name}}_test_db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-{{database_name}}_test}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data:rw,noexec,nosuid,size=512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-{{database_name}}_test}"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    networks:
+      - {{project-name}}_test_network
+
+  test_runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: {{project-name}}_test_runner
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@test_db:5432/${POSTGRES_DB:-{{database_name}}_test}
+      - RUST_LOG=${RUST_LOG:-debug}
+      - RUST_BACKTRACE=1
+    volumes:
+      - .:/app
+      - cargo_cache:/usr/local/cargo/registry
+      - target_cache:/app/target
+    depends_on:
+      test_db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        diesel migration run &&
+        cargo test ${TEST_FILTER:-} -- --test-threads=1 ${TEST_ARGS:-}
+      "
+    networks:
+      - {{project-name}}_test_network
+
+volumes:
+  cargo_cache:
+    name: {{project-name}}_test_cargo_cache
+  target_cache:
+    name: {{project-name}}_test_target_cache
+
+networks:
+  {{project-name}}_test_network:
+    name: {{project-name}}_test_network

@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: {{project-name}} - Production Lambda deployment
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    Description: PostgreSQL connection string
+    NoEcho: true
+
+  LambdaMemorySize:
+    Type: Number
+    Default: 512
+    Description: Lambda function memory size in MB
+
+  LambdaTimeout:
+    Type: Number
+    Default: 30
+    Description: Lambda function timeout in seconds
+
+Resources:
+  # Lambda Function
+  {{project-name | capitalize}}Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '{{project-name}}-function'
+      PackageType: Image
+      ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/{{project-name}}:latest'
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          DATABASE_URL: !Ref DatabaseUrl
+          RUST_LOG: info,{{project_name}}=debug
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref HttpApi
+        RootHttpApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+            ApiId: !Ref HttpApi
+
+  # HTTP API Gateway
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: !Sub '{{project-name}}-ApiUrl'
+
+  FunctionArn:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt {{project-name | capitalize}}Function.Arn
+    Export:
+      Name: !Sub '{{project-name}}-FunctionArn'

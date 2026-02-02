@@ -1,0 +1,15 @@
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "{{project-name}}-prod"
+s3_prefix = "{{project-name}}"
+region = "eu-central-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["{{project-name | capitalize}}Function={{AWS_ACCOUNT_ID}}.dkr.ecr.eu-central-1.amazonaws.com/{{project-name}}"]
+
+[default.build]
+[default.build.parameters]
+use_container = true
