@@ -1,6 +1,7 @@
 services:
   test_db:
     image: postgres:17-alpine
+    platform: linux/amd64
     container_name: {{project-name}}_test_db
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -16,6 +17,13 @@ services:
       interval: 2s
       timeout: 3s
       retries: 10
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: ${TEST_DB_MEMORY_LIMIT:-256M}
+        reservations:
+          memory: ${TEST_DB_MEMORY_RESERVATION:-128M}
     networks:
       - {{project-name}}_test_network
 
@@ -24,6 +32,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: development
+    platform: linux/amd64
     container_name: {{project-name}}_test_runner
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@test_db:5432/${POSTGRES_DB:-{{database_name}}_test}
@@ -41,6 +50,12 @@ services:
         diesel migration run &&
         cargo test ${TEST_FILTER:-} -- --test-threads=1 ${TEST_ARGS:-}
       "
+    deploy:
+      resources:
+        limits:
+          memory: ${TEST_APP_MEMORY_LIMIT:-512M}
+        reservations:
+          memory: ${TEST_APP_MEMORY_RESERVATION:-256M}
     networks:
       - {{project-name}}_test_network
 

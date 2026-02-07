@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: development
+    platform: linux/amd64
     container_name: {{project-name}}_app
     ports:
       - "${SERVER_PORT:-3000}:3000"
@@ -19,11 +20,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${APP_MEMORY_LIMIT:-1G}
+        reservations:
+          memory: ${APP_MEMORY_RESERVATION:-512M}
     networks:
       - {{project-name}}_network
 
   db:
     image: postgres:17-alpine
+    platform: linux/amd64
     container_name: {{project-name}}_db
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -38,6 +47,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${DB_MEMORY_LIMIT:-512M}
+        reservations:
+          memory: ${DB_MEMORY_RESERVATION:-256M}
     networks:
       - {{project-name}}_network
 

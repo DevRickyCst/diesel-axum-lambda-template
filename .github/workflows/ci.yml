@@ -8,6 +8,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
 
 jobs:
   check:
@@ -15,7 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.92
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: cargo check --all-targets --all-features
 
   fmt:
@@ -23,9 +29,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.92
         with:
           components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: cargo fmt --all -- --check
 
   clippy:
@@ -33,9 +42,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.92
         with:
           components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
   test:
@@ -56,12 +68,26 @@ jobs:
         ports:
           - 5432:5432
 
+    env:
+      CARGO_BUILD_JOBS: 2
+
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.92
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Cache diesel_cli
+        id: cache-diesel
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/diesel
+          key: ${{ runner.os }}-diesel-cli-2.3.0
 
       - name: Install Diesel CLI
-        run: cargo install diesel_cli --no-default-features --features postgres
+        if: steps.cache-diesel.outputs.cache-hit != 'true'
+        run: cargo install diesel_cli --no-default-features --features postgres --version 2.3.0
 
       - name: Run migrations
         env:
@@ -76,7 +102,12 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.92
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: cargo build --release --all-features

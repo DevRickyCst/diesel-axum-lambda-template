@@ -22,6 +22,41 @@ AWS_REGION="${AWS_REGION:-eu-central-1}"
 AWS_PROFILE="${AWS_PROFILE:-default}"
 ECR_REPO_NAME="{{project-name}}"
 
+usage() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Deploy {{project-name}} to AWS Lambda using SAM
+
+OPTIONS:
+    -s, --stack-name NAME     CloudFormation stack name [default: {{project-name}}-prod]
+    -r, --region REGION       AWS region [default: eu-central-1]
+    -p, --profile PROFILE     AWS CLI profile [default: default]
+    --create-stack            Create new SAM stack (first deployment)
+    --skip-build              Skip Docker build and push
+    -h, --help                Show this help message
+
+EXAMPLES:
+    # First deployment
+    $0 --create-stack
+
+    # Update code
+    $0
+
+    # Update with custom profile
+    $0 -p production
+
+    # Just update Lambda (skip build)
+    $0 --skip-build
+
+PREREQUISITES:
+    1. AWS CLI installed and configured
+    2. SAM CLI installed (pip install aws-sam-cli)
+    3. Docker installed and running
+    4. Edit infra/samconfig.toml with your parameters
+EOF
+}
+
 print_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
@@ -76,6 +111,15 @@ check_dependencies() {
 
 get_aws_account_id() {
     aws sts get-caller-identity --profile "$AWS_PROFILE" --query Account --output text
+}
+
+get_ecr_repository_uri() {
+    aws cloudformation describe-stacks \
+        --stack-name "$STACK_NAME" \
+        --profile "$AWS_PROFILE" \
+        --region "$AWS_REGION" \
+        --query 'Stacks[0].Outputs[?OutputKey==`ECRRepositoryUri`].OutputValue' \
+        --output text 2>/dev/null || echo ""
 }
 
 create_ecr_repository() {
@@ -194,16 +238,65 @@ show_outputs() {
 }
 
 main() {
+    local create_stack=false
+    local skip_build=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -s|--stack-name) STACK_NAME="$2"; shift 2 ;;
+            -r|--region) AWS_REGION="$2"; shift 2 ;;
+            -p|--profile) AWS_PROFILE="$2"; shift 2 ;;
+            --create-stack) create_stack=true; shift ;;
+            --skip-build) skip_build=true; shift ;;
+            -h|--help) usage; exit 0 ;;
+            *) print_error "Unknown option: $1"; usage; exit 1 ;;
+        esac
+    done
+
     print_header "{{project-name}} - Lambda Deployment"
     print_info "Stack Name: $STACK_NAME"
     print_info "AWS Region: $AWS_REGION"
     print_info "AWS Profile: $AWS_PROFILE"
 
     check_dependencies
-    create_ecr_repository
-    login_to_ecr
-    build_and_push_image
-    deploy_sam_stack
+
+    if [ "$create_stack" = true ]; then
+        # First-time deployment: create ECR, build, push, and deploy
+        print_info "Mode: Create Stack (first deployment)"
+        create_ecr_repository
+        login_to_ecr
+        build_and_push_image
+        deploy_sam_stack
+    else
+        # Update deployment: check if stack exists
+        local stack_exists=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --profile "$AWS_PROFILE" \
+            --region "$AWS_REGION" \
+            --query 'Stacks[0].StackName' \
+            --output text 2>/dev/null || echo "")
+
+        if [ -z "$stack_exists" ]; then
+            print_error "Stack '$STACK_NAME' does not exist"
+            print_info "Use --create-stack for first deployment"
+            exit 1
+        fi
+
+        print_info "Mode: Update Stack"
+
+        if [ "$skip_build" = false ]; then
+            # Build and push new image
+            login_to_ecr
+            build_and_push_image
+        else
+            print_warning "Skipping Docker build and push"
+        fi
+
+        # Update Lambda
+        deploy_sam_stack
+    fi
+
     show_outputs
 
     print_header "Deployment Complete"

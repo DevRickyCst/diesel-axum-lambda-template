@@ -8,6 +8,17 @@ Parameters:
     Description: PostgreSQL connection string
     NoEcho: true
 
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: JWT secret key (optional, only if using JWT auth)
+
+  CorsAllowedOrigins:
+    Type: String
+    Default: '*'
+    Description: Comma-separated list of allowed CORS origins
+
   LambdaMemorySize:
     Type: Number
     Default: 512
@@ -18,16 +29,28 @@ Parameters:
     Default: 30
     Description: Lambda function timeout in seconds
 
+Conditions:
+  HasJwtSecret: !Not [!Equals [!Ref JwtSecret, ""]]
+
 Resources:
   # Lambda Function
   {{project-name | capitalize}}Function:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub '{{project-name}}-function'
+      FunctionName: !Sub '{{project-name}}-prod'
       PackageType: Image
       ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/{{project-name}}:latest'
       MemorySize: !Ref LambdaMemorySize
       Timeout: !Ref LambdaTimeout
+      Architectures:
+        - x86_64
+      Tracing: Active
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSXRayDaemonWriteAccess
+      Tags:
+        Environment: production
+        Application: {{project-name}}
       Environment:
         Variables:
           DATABASE_URL: !Ref DatabaseUrl
@@ -63,15 +86,34 @@ Resources:
         AllowHeaders:
           - "*"
 
+  # CloudWatch Log Groups
+  ApiAccessLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/apigateway/{{project-name}}-prod
+      RetentionInDays: 30
+
+  FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${{{project-name | capitalize}}Function}'
+      RetentionInDays: 30
+
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
     Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Export:
-      Name: !Sub '{{project-name}}-ApiUrl'
+      Name: !Sub '${AWS::StackName}-ApiUrl'
 
   FunctionArn:
     Description: "Lambda Function ARN"
     Value: !GetAtt {{project-name | capitalize}}Function.Arn
     Export:
-      Name: !Sub '{{project-name}}-FunctionArn'
+      Name: !Sub '${AWS::StackName}-FunctionArn'
+
+  ECRRepositoryUri:
+    Description: ECR Repository URI
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/{{project-name}}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ECRRepositoryUri'
