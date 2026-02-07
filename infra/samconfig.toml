@@ -1,15 +1,37 @@
 version = 0.1
 
 [default]
-[default.deploy]
-[default.deploy.parameters]
+[default.global.parameters]
 stack_name = "{{project-name}}-prod"
+region = "eu-central-1"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+resolve_s3 = true
 s3_prefix = "{{project-name}}"
 region = "eu-central-1"
-confirm_changeset = true
-capabilities = "CAPABILITY_IAM"
 image_repositories = ["{{project-name | capitalize}}Function={{AWS_ACCOUNT_ID}}.dkr.ecr.eu-central-1.amazonaws.com/{{project-name}}"]
+parameter_overrides = [
+    "DatabaseUrl=postgres://user:pass@host:5432/db",
+    "JwtSecret=CHANGE_ME_IN_PRODUCTION",
+    "CorsAllowedOrigins=https://yourdomain.com",
+    "LambdaMemorySize=1024",
+    "LambdaTimeout=30"
+]
 
-[default.build]
-[default.build.parameters]
-use_container = true
+[default.package.parameters]
+resolve_s3 = true
+
+[default.sync.parameters]
+watch = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[default.local_start_lambda.parameters]
+warm_containers = "EAGER"
