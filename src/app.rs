@@ -1,7 +1,4 @@
-use axum::{
-    routing::{delete, get, post, put},
-    Router,
-};
+use axum::{Router, routing::get};
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::health::health;

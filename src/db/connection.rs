@@ -27,7 +27,8 @@ pub fn init_pool() -> Result<()> {
 /// Get a reference to the initialized pool.
 /// Panics if the pool hasn't been initialized with init_pool().
 pub fn get_pool() -> &'static DbPool {
-    POOL.get().expect("DB pool not initialized. Call init_pool() first.")
+    POOL.get()
+        .expect("DB pool not initialized. Call init_pool() first.")
 }
 
 /// Get a connection from the pool.
@@ -40,6 +41,7 @@ pub fn get_connection() -> Result<DbConnection> {
 /// Legacy function for compatibility with existing code.
 /// Creates a new pool - use init_pool() and get_pool() instead for better performance.
 #[deprecated(note = "Use init_pool() at startup and get_pool() to access the pool")]
+#[allow(dead_code)]
 pub fn create_pool() -> Result<DbPool> {
     let url = std::env::var("DATABASE_URL").context("DATABASE_URL env var not set")?;
     let manager = ConnectionManager::<PgConnection>::new(url);

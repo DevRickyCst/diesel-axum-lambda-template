@@ -1,10 +1,10 @@
 use std::env;
 
-mod api;
 mod app;
 mod db;
 mod error;
 mod handlers;
+mod response;
 mod services;
 
 use app::build_router;
@@ -15,14 +15,14 @@ fn setup_logging() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,{{project_name}}=debug".into()),
+                .unwrap_or_else(|_| "info,axum_diesel_project=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     // Initialize logging early for all modes
     setup_logging();
 
@@ -35,7 +35,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok() {
         // Lambda execution mode
         tracing::info!("Starting in Lambda mode");
-        lambda_http::run(app).await?;
+        if let Err(e) = lambda_http::run(app).await {
+            tracing::error!("Lambda runtime error: {}", e);
+            std::process::exit(1);
+        }
     } else {
         // Local HTTP server mode
         let host = env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
@@ -43,11 +46,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let addr = format!("{}:{}", host, port);
 
         tracing::info!("Starting in local HTTP server mode");
-        let listener = tokio::net::TcpListener::bind(&addr).await?;
+        let listener = tokio::net::TcpListener::bind(&addr)
+            .await
+            .expect("Failed to bind to address");
         tracing::info!("Server listening on http://{}", addr);
 
-        axum::serve(listener, app).await?;
+        if let Err(e) = axum::serve(listener, app).await {
+            tracing::error!("Server error: {}", e);
+            std::process::exit(1);
+        }
     }
-
-    Ok(())
 }

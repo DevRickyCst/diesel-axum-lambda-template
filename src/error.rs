@@ -1,11 +1,10 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
+use axum_diesel_api::ErrorResponse;
 use std::fmt;
-
-use crate::api::ErrorResponse;
 
 #[derive(Debug, Clone)]
 pub enum AppError {
@@ -56,20 +55,12 @@ impl AppError {
     fn get_error_info(&self) -> (StatusCode, &'static str, String, Option<String>) {
         match self {
             // 404 Not Found
-            AppError::NotFound(msg) => (
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                msg.clone(),
-                None,
-            ),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "NOT_FOUND", msg.clone(), None),
 
             // 409 Conflict
-            AppError::Duplicate(msg) => (
-                StatusCode::CONFLICT,
-                "DUPLICATE_ENTRY",
-                msg.clone(),
-                None,
-            ),
+            AppError::Duplicate(msg) => {
+                (StatusCode::CONFLICT, "DUPLICATE_ENTRY", msg.clone(), None)
+            }
 
             // 400 Bad Request
             AppError::ValidationError(msg) => (
@@ -78,12 +69,9 @@ impl AppError {
                 msg.clone(),
                 None,
             ),
-            AppError::InvalidInput(msg) => (
-                StatusCode::BAD_REQUEST,
-                "INVALID_INPUT",
-                msg.clone(),
-                None,
-            ),
+            AppError::InvalidInput(msg) => {
+                (StatusCode::BAD_REQUEST, "INVALID_INPUT", msg.clone(), None)
+            }
 
             // 500 Internal Server Error
             AppError::DatabaseError(msg) => (

@@ -1,6 +1,6 @@
+use axum_diesel_api::{CreateTaskRequest, TaskResponse, UpdateTaskRequest};
 use uuid::Uuid;
 
-use crate::api::{CreateTaskRequest, TaskResponse, UpdateTaskRequest};
 use crate::db::connection;
 use crate::db::models::{NewTask, UpdateTask};
 use crate::db::repositories::TaskRepository;
@@ -35,7 +35,9 @@ impl TaskService {
         }
 
         if req.title.len() > 255 {
-            return Err(AppError::validation("Title must be less than 255 characters"));
+            return Err(AppError::validation(
+                "Title must be less than 255 characters",
+            ));
         }
 
         let mut conn = connection::get_connection()
@@ -43,7 +45,10 @@ impl TaskService {
 
         let new_task = NewTask {
             title: req.title.trim().to_string(),
-            description: req.description.map(|d| d.trim().to_string()).filter(|d| !d.is_empty()),
+            description: req
+                .description
+                .map(|d| d.trim().to_string())
+                .filter(|d| !d.is_empty()),
             completed: req.completed,
         };
 
@@ -60,7 +65,9 @@ impl TaskService {
             }
 
             if title.len() > 255 {
-                return Err(AppError::validation("Title must be less than 255 characters"));
+                return Err(AppError::validation(
+                    "Title must be less than 255 characters",
+                ));
             }
         }
 
@@ -72,7 +79,10 @@ impl TaskService {
 
         let update_task = UpdateTask {
             title: req.title.map(|t| t.trim().to_string()),
-            description: req.description.map(|d| d.trim().to_string()).filter(|d| !d.is_empty()),
+            description: req
+                .description
+                .map(|d| d.trim().to_string())
+                .filter(|d| !d.is_empty()),
             completed: req.completed,
         };
 
