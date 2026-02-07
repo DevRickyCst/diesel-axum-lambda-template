@@ -1,3 +1,4 @@
+use axum_diesel_api::TaskResponse;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -30,4 +31,17 @@ pub struct UpdateTask {
     pub title: Option<String>,
     pub description: Option<String>,
     pub completed: Option<bool>,
+}
+
+impl From<Task> for TaskResponse {
+    fn from(task: Task) -> Self {
+        Self {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            completed: task.completed,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+        }
+    }
 }

@@ -1,10 +1,10 @@
 use diesel::prelude::*;
 use uuid::Uuid;
 
+use crate::db::connection::DbConnection;
 use crate::db::error::RepositoryError;
 use crate::db::models::{NewTask, Task, UpdateTask};
 use crate::db::schema::tasks;
-use crate::db::connection::DbConnection;
 
 pub struct TaskRepository;
 

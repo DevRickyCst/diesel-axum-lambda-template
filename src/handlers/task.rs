@@ -1,10 +1,9 @@
-use axum::{
-    extract::{Json, Path},
-};
+use axum::extract::{Json, Path};
+use axum_diesel_api::{CreateTaskRequest, TaskResponse, UpdateTaskRequest};
 use uuid::Uuid;
 
-use crate::api::{AppResponse, CreateTaskRequest, TaskResponse, UpdateTaskRequest};
 use crate::error::AppError;
+use crate::response::AppResponse;
 use crate::services::TaskService;
 
 /// List all tasks
